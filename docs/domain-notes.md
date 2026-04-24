@@ -63,13 +63,15 @@ tags: ["일기", "회고"]           # optional · list[str] · Notion Tags mult
 categories: ["일지"]             # 기본값 ["일지"] (기존 블로그 컨벤션), Notion Category select 있으면 덮어씀
 slug: "2026-04-20"               # required · str · 디렉터리명과 일치
 description: "..."               # optional · str · Notion Summary rich_text (없으면 본문 첫 200자) · PaperMod/archetype 필드명
-source_notion_id: "abc123…"      # required · str · Notion page id (idempotency 키, dayblog 커스텀)
+source_notion_id: "abc123…"      # optional · str · Notion page id (idempotency 키, dayblog 커스텀)
 ---
 ```
 
 > 필드명 근거: 기존 `content/posts/hello.md`와 `archetypes/default.md`는 `description`을 쓴다(`summary` 아님). 기존 블로그의 `categories: ["일지"]` 컨벤션을 따른다. `source_notion_id`는 PaperMod가 무시하는 dayblog 커스텀 필드 — idempotency 판단용.
 
-- **Idempotency 키**: `source_notion_id` + `lastmod` 쌍으로 판단.
+> `source_notion_id` 의미 (Phase 1에서 명확화): Phase 3 `/publish-today`가 Notion 페이지를 발행할 때 **반드시 세팅**. Phase 1 `/post-new`가 만드는 수동 드래프트에는 **없음** — 그 경우 idempotency는 적용 대상이 아니며 사용자 수작업 관리. 따라서 validator는 `source_notion_id` 존재 자체는 강제하지 않고, 존재할 때만 형식을 검사한다. Phase 3 로직이 Notion-sourced 경로에서 자체 보증한다.
+
+- **Idempotency 키**: `source_notion_id` + `lastmod` 쌍으로 판단 (Notion-sourced 포스트에만).
 - **시간대**: KST(`+09:00`) 고정. 사용자가 시차 여행 시 수동 조정.
 - **검증 규칙**: `hugo.validate_front_matter()`는 required 필드 존재 + 타입 + `slug == dirname` 일치 + `source_notion_id` 형식 확인.
 
