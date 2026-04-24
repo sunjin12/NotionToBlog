@@ -19,7 +19,6 @@ from dayblog.notion.render import (
     render_rich_text,
 )
 
-
 # --- factories ----------------------------------------------------------------
 
 
@@ -255,4 +254,4 @@ def test_supported_block_types_covers_domain_notes_table():
         "bookmark",
         "link_preview",
     }
-    assert SUPPORTED_BLOCK_TYPES == expected
+    assert expected == SUPPORTED_BLOCK_TYPES

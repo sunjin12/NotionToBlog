@@ -1,0 +1,39 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+
+jobs:
+  test:
+    # Single matrix — Windows + Python 3.14 (plan §"self-dogfood only"). Matching
+    # the user's dev env rather than fanning across platforms keeps CI honest
+    # about what's actually being validated.
+    runs-on: windows-latest
+    strategy:
+      matrix:
+        python-version: ['3.14']
+    timeout-minutes: 10
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: false  # we don't pull PaperMod here; Dayblog code is self-contained
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install Dayblog + dev + mcp extras
+        run: python -m pip install -e ".[mcp,dev]"
+
+      - name: Lint (ruff)
+        run: python -m ruff check src tests
+
+      - name: Unit + integration tests
+        # tests/test_pre_push_guard.py spawns real `git` subprocesses; GitHub
+        # runners have git on PATH by default so no extra setup needed.
+        run: python -m pytest -ra

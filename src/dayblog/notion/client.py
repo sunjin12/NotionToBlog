@@ -67,9 +67,9 @@ class NotionClient:
     """Rate-limited wrapper exposing just the endpoints Dayblog needs.
 
     ``raw`` must look like the ``notion_client.Client`` surface: it must have
-    ``databases.query``, ``pages.retrieve``, and ``blocks.children.list``
-    callables. Pagination is handled automatically; callers receive the fully
-    materialized result list.
+    ``databases.retrieve``, ``data_sources.query``, ``pages.retrieve``, and
+    ``blocks.children.list`` callables. Pagination is handled automatically;
+    callers receive the fully materialized result list.
     """
 
     def __init__(
@@ -92,6 +92,7 @@ class NotionClient:
         self._limiter = TokenBucket.create(rate_rps, clock=clock, sleep=sleep)
         self._sleep = sleep
         self._max_retries = max_retries
+        self._data_source_ids: dict[str, str] = {}
 
     def query_database(
         self,
@@ -102,21 +103,36 @@ class NotionClient:
     ) -> list[dict]:
         """Query a Notion database and return every page (paginated under the hood).
 
-        Passes ``database_id`` through as ``data_source_id`` to the SDK — Notion's
-        2025-09-03 API split databases into containers + data sources, and
-        ``notion-client`` 3.x moved ``query`` onto ``data_sources``. For any
-        database created before that split (the default case for self-dogfood
-        users) the two IDs are identical.
+        Notion's 2025-09-03 API split databases into containers + data sources
+        and ``notion-client`` 3.x moved ``query`` onto ``data_sources``. The
+        ``data_source_id`` is not the same as the ``database_id`` on any DB
+        created (or restructured) after the split, so we resolve it once via
+        ``databases.retrieve`` and cache per-database-id for the process.
         """
+        data_source_id = self._resolve_data_source_id(database_id)
         return self._paginate(
             lambda **cursor: self._request(
                 self._raw.data_sources.query,
-                data_source_id=database_id,
+                data_source_id=data_source_id,
                 filter=filter,
                 sorts=sorts,
                 **cursor,
             )
         )
+
+    def _resolve_data_source_id(self, database_id: str) -> str:
+        cached = self._data_source_ids.get(database_id)
+        if cached is not None:
+            return cached
+        db = self._request(self._raw.databases.retrieve, database_id=database_id)
+        sources = db.get("data_sources") or []
+        if not sources:
+            raise RuntimeError(
+                f"Notion DB {database_id} exposes no data_sources — expected at least one under API 2025-09-03"
+            )
+        resolved = sources[0]["id"]
+        self._data_source_ids[database_id] = resolved
+        return resolved
 
     def retrieve_page(self, page_id: str) -> dict:
         return self._request(self._raw.pages.retrieve, page_id=page_id)

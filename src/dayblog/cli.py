@@ -143,8 +143,8 @@ def _cmd_publish_today(args: argparse.Namespace) -> int:
         return 2
 
     # Lazy imports — these pull in notion-client/httpx, installed via `.[mcp]`.
-    from dayblog.notion.client import NotionClient  # noqa: PLC0415
-    from dayblog.publish import publish_page  # noqa: PLC0415
+    from dayblog.notion.client import NotionClient
+    from dayblog.publish import publish_page
 
     client = NotionClient(token=token)
 
@@ -164,7 +164,7 @@ def _cmd_publish_today(args: argparse.Namespace) -> int:
             result = publish_page(
                 client=client, page_id=pid, site_root=site, http_get=http_get
             )
-        except Exception as exc:  # noqa: BLE001
+        except Exception as exc:
             print(f"error publishing {pid}: {exc}", file=sys.stderr)
             exit_code = 1
             continue
@@ -186,7 +186,7 @@ def _cmd_install_pre_push(args: argparse.Namespace) -> int:
         return 1
     target.write_text(_PRE_PUSH_HOOK, encoding="utf-8", newline="\n")
     try:
-        import stat  # noqa: PLC0415
+        import stat
 
         mode = target.stat().st_mode
         target.chmod(mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
@@ -216,7 +216,7 @@ def _query_ready_page_ids(client, db_id: str, date_iso: str) -> list[str]:
 
 
 def _build_http_get():
-    import httpx  # noqa: PLC0415
+    import httpx
 
     def get(url: str) -> bytes:
         resp = httpx.get(url, timeout=30.0, follow_redirects=True)

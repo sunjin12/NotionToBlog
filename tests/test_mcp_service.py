@@ -14,7 +14,6 @@ from dayblog_mcp.service import (
     today_kst_iso,
 )
 
-
 # --- fakes --------------------------------------------------------------------
 
 

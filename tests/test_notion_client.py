@@ -12,7 +12,6 @@ import pytest
 
 from dayblog.notion.client import NotionClient, TokenBucket
 
-
 # --- fakes --------------------------------------------------------------------
 
 
@@ -49,12 +48,17 @@ class _Endpoint:
 @dataclass
 class FakeRaw:
     data_sources_query: _Endpoint = field(default_factory=_Endpoint)
+    databases_retrieve: _Endpoint = field(default_factory=_Endpoint)
     pages_retrieve: _Endpoint = field(default_factory=_Endpoint)
     blocks_children_list: _Endpoint = field(default_factory=_Endpoint)
 
     class _DataSources:
         def __init__(self, ep: _Endpoint) -> None:
             self.query = ep
+
+    class _Databases:
+        def __init__(self, ep: _Endpoint) -> None:
+            self.retrieve = ep
 
     class _Pages:
         def __init__(self, ep: _Endpoint) -> None:
@@ -66,6 +70,7 @@ class FakeRaw:
 
     def __post_init__(self) -> None:
         self.data_sources = self._DataSources(self.data_sources_query)
+        self.databases = self._Databases(self.databases_retrieve)
         self.pages = self._Pages(self.pages_retrieve)
         self.blocks = self._Blocks(self.blocks_children_list)
 
@@ -131,6 +136,7 @@ def test_retrieve_page_passes_page_id():
 
 def test_query_database_paginates_until_exhausted():
     raw = FakeRaw()
+    raw.databases_retrieve.responses = [{"data_sources": [{"id": "ds-1", "name": "n"}]}]
     raw.data_sources_query.responses = [
         {"results": [{"id": "1"}, {"id": "2"}], "has_more": True, "next_cursor": "c1"},
         {"results": [{"id": "3"}], "has_more": False, "next_cursor": None},
@@ -138,11 +144,34 @@ def test_query_database_paginates_until_exhausted():
     client, _ = _make_client(raw)
     result = client.query_database("db-1")
     assert [r["id"] for r in result] == ["1", "2", "3"]
-    # SDK 3.x routes query through data_sources; our wrapper passes the
-    # database_id through unchanged as data_source_id (same value for
-    # databases created before Notion's 2025-09-03 API split).
-    assert raw.data_sources_query.calls[0] == {"data_source_id": "db-1"}
+    # Under API 2025-09-03 the database_id and data_source_id diverge; the
+    # wrapper resolves the latter via databases.retrieve before querying.
+    assert raw.databases_retrieve.calls == [{"database_id": "db-1"}]
+    assert raw.data_sources_query.calls[0] == {"data_source_id": "ds-1"}
     assert raw.data_sources_query.calls[1]["start_cursor"] == "c1"
+
+
+def test_query_database_caches_data_source_id_across_calls():
+    raw = FakeRaw()
+    raw.databases_retrieve.responses = [{"data_sources": [{"id": "ds-1"}]}]
+    raw.data_sources_query.responses = [
+        {"results": [], "has_more": False, "next_cursor": None},
+        {"results": [], "has_more": False, "next_cursor": None},
+    ]
+    client, _ = _make_client(raw)
+    client.query_database("db-1")
+    client.query_database("db-1")
+    # retrieve happens once; second query reuses cached data_source_id.
+    assert len(raw.databases_retrieve.calls) == 1
+    assert all(c["data_source_id"] == "ds-1" for c in raw.data_sources_query.calls)
+
+
+def test_query_database_raises_when_no_data_sources_present():
+    raw = FakeRaw()
+    raw.databases_retrieve.responses = [{"data_sources": []}]
+    client, _ = _make_client(raw)
+    with pytest.raises(RuntimeError, match="no data_sources"):
+        client.query_database("db-1")
 
 
 def test_list_children_paginates():
@@ -192,5 +221,5 @@ def test_request_does_not_retry_non_429_errors():
 
 
 def test_notion_client_requires_token_or_raw():
-    with pytest.raises(ValueError, match="token.*raw"):
+    with pytest.raises(ValueError, match=r"token.*raw"):
         NotionClient()

@@ -20,7 +20,6 @@ import pytest
 from dayblog.hooks import pre_push_guard as guard
 from dayblog.hooks.pre_push_guard import Violation
 
-
 # --- pure helpers -------------------------------------------------------------
 
 

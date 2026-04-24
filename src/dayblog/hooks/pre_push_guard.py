@@ -254,7 +254,7 @@ def main(argv: list[str] | None = None) -> int:
     # Load .env from cwd so HUGO_SITE_ROOT (and any other secrets) flow into the
     # hook without the user having to export them into every shell.
     try:
-        from dotenv import load_dotenv  # noqa: PLC0415
+        from dotenv import load_dotenv
 
         load_dotenv(override=False)
     except ImportError:

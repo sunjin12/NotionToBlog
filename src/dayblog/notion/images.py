@@ -83,7 +83,7 @@ def download_all(
 
 
 def _hashed_filename(page_id: str, block_id: str, url: str) -> str:
-    digest = hashlib.sha1(f"{page_id}:{block_id}".encode("utf-8")).hexdigest()[:10]
+    digest = hashlib.sha1(f"{page_id}:{block_id}".encode()).hexdigest()[:10]
     ext = _guess_ext(url)
     return f"img-{digest}{ext}"
 
