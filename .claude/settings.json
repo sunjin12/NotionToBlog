@@ -17,5 +17,18 @@
       "Read(./.env)",
       "Read(./.env.local)"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python -X utf8 -m dayblog.hooks.pre_push_guard claude"
+          }
+        ]
+      }
+    ]
   }
 }

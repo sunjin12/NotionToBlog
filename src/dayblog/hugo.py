@@ -75,7 +75,7 @@ def new_post(
         fm["source_notion_id"] = source_notion_id
 
     bundle_dir.mkdir(parents=True, exist_ok=True)
-    index.write_text(_render(fm, body), encoding="utf-8")
+    index.write_text(compose_post(fm, body), encoding="utf-8")
     return index
 
 
@@ -96,7 +96,7 @@ def validate_front_matter(path: Path) -> list[str]:
     except FileNotFoundError:
         return [f"{path}: file not found"]
 
-    fm = _parse_front_matter(text)
+    fm = parse_front_matter(text)
     if fm is None:
         return [f"{path}: missing or malformed YAML front matter"]
 
@@ -154,7 +154,7 @@ def list_drafts(site_root: Path) -> list[Path]:
             text = md.read_text(encoding="utf-8")
         except OSError:
             continue
-        fm = _parse_front_matter(text)
+        fm = parse_front_matter(text)
         if fm is None:
             continue
         if fm.get("draft") is True:
@@ -175,7 +175,8 @@ def _resolve_slug(posts_dir: Path, date: date_cls) -> str:
     return f"{base}-{i}"
 
 
-def _render(fm: dict[str, Any], body: str) -> str:
+def compose_post(fm: dict[str, Any], body: str) -> str:
+    """Render a full Hugo post file: ``---\\n<yaml>---\\n<body>``."""
     dumped = yaml.safe_dump(
         fm,
         allow_unicode=True,
@@ -186,7 +187,12 @@ def _render(fm: dict[str, Any], body: str) -> str:
     return f"---\n{dumped}---\n{body_tail}"
 
 
-def _parse_front_matter(text: str) -> dict[str, Any] | None:
+def parse_front_matter(text: str) -> dict[str, Any] | None:
+    """Extract the YAML front-matter dict from a Hugo post file string.
+
+    Returns ``None`` when the file has no ``---`` fence or the YAML is malformed
+    — callers decide whether that is a warning, an error, or a tolerated skip.
+    """
     if not text.startswith("---"):
         return None
     lines = text.splitlines()

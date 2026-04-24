@@ -49,6 +49,23 @@ def _build_parser() -> argparse.ArgumentParser:
     val_p.add_argument("path", help="index.md 또는 <slug>.md 경로")
     val_p.set_defaults(func=_cmd_validate)
 
+    pub_p = sub.add_parser(
+        "publish-today",
+        help="오늘 KST Notion Ready 페이지를 Hugo 번들로 발행",
+    )
+    pub_p.add_argument("--site-root")
+    pub_p.add_argument("--page-id", help="단일 페이지만 발행 (지정 시 --date 무시)")
+    pub_p.add_argument("--date", help="YYYY-MM-DD; 미지정 시 오늘 KST")
+    pub_p.set_defaults(func=_cmd_publish_today)
+
+    install_p = sub.add_parser(
+        "install-pre-push",
+        help="Hugo 레포에 .git/hooks/pre-push 가드 설치",
+    )
+    install_p.add_argument("--site-root")
+    install_p.add_argument("--force", action="store_true", help="기존 훅 덮어쓰기")
+    install_p.set_defaults(func=_cmd_install_pre_push)
+
     return p
 
 
@@ -112,6 +129,109 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         return 1
     print("OK")
     return 0
+
+
+def _cmd_publish_today(args: argparse.Namespace) -> int:
+    site = _resolve_site_root(args.site_root)
+    token = os.environ.get("NOTION_TOKEN")
+    db_id = os.environ.get("NOTION_DATABASE_ID")
+    if not token:
+        print("error: NOTION_TOKEN not set (add to .env)", file=sys.stderr)
+        return 2
+    if not db_id and not args.page_id:
+        print("error: NOTION_DATABASE_ID not set (add to .env) or pass --page-id", file=sys.stderr)
+        return 2
+
+    # Lazy imports — these pull in notion-client/httpx, installed via `.[mcp]`.
+    from dayblog.notion.client import NotionClient  # noqa: PLC0415
+    from dayblog.publish import publish_page  # noqa: PLC0415
+
+    client = NotionClient(token=token)
+
+    if args.page_id:
+        page_ids = [args.page_id]
+    else:
+        target_date = args.date or _today_kst_iso()
+        page_ids = _query_ready_page_ids(client, db_id, target_date)
+        if not page_ids:
+            print(f"(no Ready pages for {target_date})", file=sys.stderr)
+            return 0
+
+    http_get = _build_http_get()
+    exit_code = 0
+    for pid in page_ids:
+        try:
+            result = publish_page(
+                client=client, page_id=pid, site_root=site, http_get=http_get
+            )
+        except Exception as exc:  # noqa: BLE001
+            print(f"error publishing {pid}: {exc}", file=sys.stderr)
+            exit_code = 1
+            continue
+        print(f"{result.path}\t{result.status}\t(images={result.image_count})")
+        for w in result.warnings:
+            print(f"WARN: {w}", file=sys.stderr)
+    return exit_code
+
+
+def _cmd_install_pre_push(args: argparse.Namespace) -> int:
+    site = _resolve_site_root(args.site_root)
+    hooks_dir = site / ".git" / "hooks"
+    if not hooks_dir.exists():
+        print(f"error: {hooks_dir} does not exist (not a git repo?)", file=sys.stderr)
+        return 2
+    target = hooks_dir / "pre-push"
+    if target.exists() and not args.force:
+        print(f"error: {target} exists; pass --force to overwrite", file=sys.stderr)
+        return 1
+    target.write_text(_PRE_PUSH_HOOK, encoding="utf-8", newline="\n")
+    try:
+        import stat  # noqa: PLC0415
+
+        mode = target.stat().st_mode
+        target.chmod(mode | stat.S_IEXEC | stat.S_IXGRP | stat.S_IXOTH)
+    except OSError:
+        pass
+    print(f"installed: {target}")
+    return 0
+
+
+# --- helpers -----------------------------------------------------------------
+
+
+def _today_kst_iso() -> str:
+    return datetime.now(hugo.KST).date().isoformat()
+
+
+def _query_ready_page_ids(client, db_id: str, date_iso: str) -> list[str]:
+    filter_ = {
+        "and": [
+            {"property": "Status", "select": {"equals": "Ready"}},
+            {"property": "Date", "date": {"equals": date_iso}},
+        ]
+    }
+    sorts = [{"property": "Date", "direction": "ascending"}]
+    pages = client.query_database(db_id, filter=filter_, sorts=sorts)
+    return [p["id"] for p in pages if p.get("id")]
+
+
+def _build_http_get():
+    import httpx  # noqa: PLC0415
+
+    def get(url: str) -> bytes:
+        resp = httpx.get(url, timeout=30.0, follow_redirects=True)
+        resp.raise_for_status()
+        return resp.content
+
+    return get
+
+
+_PRE_PUSH_HOOK = """\
+#!/bin/sh
+# Dayblog pre-push guard — blocks push when any content/posts/*.md has draft:true.
+# Installed by: python -X utf8 -m dayblog install-pre-push
+exec python -X utf8 -m dayblog.hooks.pre_push_guard pre-push
+"""
 
 
 if __name__ == "__main__":  # pragma: no cover
