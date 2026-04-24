@@ -48,11 +48,11 @@ class _Endpoint:
 
 @dataclass
 class FakeRaw:
-    databases_query: _Endpoint = field(default_factory=_Endpoint)
+    data_sources_query: _Endpoint = field(default_factory=_Endpoint)
     pages_retrieve: _Endpoint = field(default_factory=_Endpoint)
     blocks_children_list: _Endpoint = field(default_factory=_Endpoint)
 
-    class _Databases:
+    class _DataSources:
         def __init__(self, ep: _Endpoint) -> None:
             self.query = ep
 
@@ -65,7 +65,7 @@ class FakeRaw:
             self.children = type("C", (), {"list": ep})()
 
     def __post_init__(self) -> None:
-        self.databases = self._Databases(self.databases_query)
+        self.data_sources = self._DataSources(self.data_sources_query)
         self.pages = self._Pages(self.pages_retrieve)
         self.blocks = self._Blocks(self.blocks_children_list)
 
@@ -131,15 +131,18 @@ def test_retrieve_page_passes_page_id():
 
 def test_query_database_paginates_until_exhausted():
     raw = FakeRaw()
-    raw.databases_query.responses = [
+    raw.data_sources_query.responses = [
         {"results": [{"id": "1"}, {"id": "2"}], "has_more": True, "next_cursor": "c1"},
         {"results": [{"id": "3"}], "has_more": False, "next_cursor": None},
     ]
     client, _ = _make_client(raw)
     result = client.query_database("db-1")
     assert [r["id"] for r in result] == ["1", "2", "3"]
-    assert raw.databases_query.calls[0] == {"database_id": "db-1"}
-    assert raw.databases_query.calls[1]["start_cursor"] == "c1"
+    # SDK 3.x routes query through data_sources; our wrapper passes the
+    # database_id through unchanged as data_source_id (same value for
+    # databases created before Notion's 2025-09-03 API split).
+    assert raw.data_sources_query.calls[0] == {"data_source_id": "db-1"}
+    assert raw.data_sources_query.calls[1]["start_cursor"] == "c1"
 
 
 def test_list_children_paginates():

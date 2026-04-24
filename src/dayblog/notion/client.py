@@ -100,10 +100,18 @@ class NotionClient:
         filter: dict | None = None,
         sorts: list[dict] | None = None,
     ) -> list[dict]:
+        """Query a Notion database and return every page (paginated under the hood).
+
+        Passes ``database_id`` through as ``data_source_id`` to the SDK — Notion's
+        2025-09-03 API split databases into containers + data sources, and
+        ``notion-client`` 3.x moved ``query`` onto ``data_sources``. For any
+        database created before that split (the default case for self-dogfood
+        users) the two IDs are identical.
+        """
         return self._paginate(
             lambda **cursor: self._request(
-                self._raw.databases.query,
-                database_id=database_id,
+                self._raw.data_sources.query,
+                data_source_id=database_id,
                 filter=filter,
                 sorts=sorts,
                 **cursor,
