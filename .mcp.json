@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "dayblog": {
+      "command": "python",
+      "args": ["-X", "utf8", "-m", "dayblog_mcp"]
+    }
+  }
+}
