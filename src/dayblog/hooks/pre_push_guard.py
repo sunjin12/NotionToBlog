@@ -251,6 +251,15 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
+    # Load .env from cwd so HUGO_SITE_ROOT (and any other secrets) flow into the
+    # hook without the user having to export them into every shell.
+    try:
+        from dotenv import load_dotenv  # noqa: PLC0415
+
+        load_dotenv(override=False)
+    except ImportError:
+        pass
+
     stdin_text = sys.stdin.read()
 
     if args.mode == "claude":
