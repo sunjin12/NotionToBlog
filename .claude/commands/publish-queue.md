@@ -1,11 +1,11 @@
 ---
-description: 발행 대기열 — /publish-today로 만들어진 draft:true 번들을 모아 보여줌
+description: 잔존 draft:true 번들 큐 (수동 드래프트 + 손편집)
 allowed-tools: Bash(python:*)
 ---
 
 # /publish-queue
 
-Hugo 사이트의 `content/posts/` 아래에서 `draft: true` 인 포스트 전체를 나열한다. `/publish-today`가 갓 만든 번들도 여기 잡힌다 — 그래서 "발행 직전 대기열" 역할.
+Hugo 사이트의 `content/posts/` 아래에서 `draft: true` 인 포스트 전체를 나열한다. Notion `/publish-today`는 더 이상 draft:true를 만들지 않으므로 (`Status == Ready`가 게이트 역할 — domain-notes §3), 이 큐에는 보통 `/post-new`로 만든 수동 스캐폴드 또는 손편집으로 draft:true가 된 잔존분만 잡힌다.
 
 ## 실행
 

@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-04-25
+
+### Changed
+
+- `/publish-today`로 만들어지는 Notion 출처 번들은 이제 `draft: false`로
+  직행한다. Notion `Status == Ready`가 이미 발행 게이트 역할을 하므로
+  수동 플립 단계가 중복이었다 — 사용자는 publish 후 바로 commit + push.
+- `/post-new` (수동 스캐폴드)는 여전히 `draft: true`로 시작하며,
+  pre-push 훅(`.git/hooks/pre-push` + Claude PreToolUse)은 손편집/수동
+  드래프트 보호용으로 유지된다.
+
+[0.2.1]: https://github.com/sunjin12/NotionToBlog/releases/tag/v0.2.1
+
 ## [0.2.0] - 2026-04-25
 
 Adds the `블로그` Heading 1 marker as a hard prerequisite for publication —
@@ -36,7 +49,7 @@ marker-less page returns `skipped-no-marker` and writes nothing.
   the publish is skipped (with a warning) so a forgotten marker can't leak
   diary content.
 
-[Unreleased]: https://github.com/sunjin12/NotionToBlog/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/sunjin12/NotionToBlog/compare/v0.2.1...HEAD
 [0.2.0]: https://github.com/sunjin12/NotionToBlog/releases/tag/v0.2.0
 
 ## [0.1.0] - 2026-04-24

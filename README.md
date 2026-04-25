@@ -87,15 +87,16 @@ python -X utf8 -m dayblog install-pre-push    # Hugo 레포에 훅 설치
 2. 페이지 맨 아래에 **Heading 1 `블로그`** 추가 → 그 아래 블로그용 내용 작성 (이 마커가 없으면 발행이 거부됨, domain-notes §9)
 3. `Status` 를 `Ready` 로 변경
 4. `python -X utf8 -m dayblog publish-today` (또는 Claude `/publish-today`) — `created` 또는 `updated` 출력
-5. `hugo server -D` → 로컬 프리뷰 확인 (PaperMod baseURL이 서브패스면 `http://localhost:1313/blog/`)
-6. 만족하면 Hugo 레포의 번들 `index.md`에서 `draft: true` → `false` 플립
-7. `git add -A && git commit -m "post: <slug>" && git push` — pre-push 훅이 잔존 draft 검사 후 GH Pages 자동 배포
+5. `hugo server` → 로컬 프리뷰 확인 (`-D` 불필요, baseURL이 서브패스면 `http://localhost:1313/blog/`)
+6. `git add -A && git commit -m "post: <slug>" && git push` — pre-push 훅이 손편집 draft 검사 후 GH Pages 자동 배포
+
+Notion `Status == Ready`가 이미 발행 게이트 역할을 하므로 publish-today는 항상 `draft: false`로 직행 — 수동 플립 단계 없음.
 
 ### 발행된 글 수정
 
 1. Notion에서 본문 수정 → `last_edited_time` 자동 갱신
 2. `python -X utf8 -m dayblog publish-today` → idempotency가 `updated`로 감지, 번들 덮어씀
-3. `git diff` 확인 → commit + push (이미 `draft: false` 라면 그대로 유지)
+3. `git diff` 확인 → commit + push
 
 ### 삭제
 
@@ -117,7 +118,7 @@ python -X utf8 -m dayblog install-pre-push    # Hugo 레포에 훅 설치
 
 ## Draft 보호 (Double guard)
 
-Dayblog는 `draft: true` 포스트가 실수로 GH Pages에 올라가는 걸 막기 위해 **두 훅을 동시에** 설치합니다:
+Dayblog는 `draft: true` 포스트가 실수로 GH Pages에 올라가는 걸 막기 위해 **두 훅을 동시에** 설치합니다. (Notion publish-today는 이미 `draft: false`로 직행하므로 자동 발행 흐름에서는 차단되지 않습니다 — 훅은 `/post-new`로 만든 수동 드래프트 + 손편집으로 draft:true가 된 포스트 보호 용도.)
 
 ### 1. `.git/hooks/pre-push` (터미널 `git push` 커버)
 

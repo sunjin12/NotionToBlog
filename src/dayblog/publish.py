@@ -260,7 +260,7 @@ def _build_front_matter(meta: _PageMeta, *, slug: str, now: datetime) -> dict[st
         "title": meta.title,
         "date": meta.date_iso,
         "lastmod": lastmod,
-        "draft": True,
+        "draft": False,
         "slug": slug,
         "categories": [meta.category] if meta.category else [hugo.DEFAULT_CATEGORY],
     }

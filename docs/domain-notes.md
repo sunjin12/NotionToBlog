@@ -58,7 +58,7 @@ Dayblog는 환경 변수 `HUGO_SITE_ROOT` 또는 `.env`의 동일 키로 타겟 
 title: "2026년 4월 20일 일기"   # required · str · Notion 페이지 Title
 date: 2026-04-20T21:15:00+09:00  # required · ISO 8601 · Notion Date property (KST)
 lastmod: 2026-04-20T22:03:11+09:00 # optional · Notion last_edited_time
-draft: false                     # required · bool · 최초 생성 시 true
+draft: false                     # required · bool · /post-new 수동 스캐폴드는 true, /publish-today (Notion) 자동 발행은 false (Status==Ready가 게이트)
 tags: ["일기", "회고"]           # optional · list[str] · Notion Tags multi-select
 categories: ["일지"]             # 기본값 ["일지"] (기존 블로그 컨벤션), Notion Category select 있으면 덮어씀
 slug: "2026-04-20"               # required · str · 디렉터리명과 일치

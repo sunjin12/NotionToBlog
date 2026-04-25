@@ -118,7 +118,7 @@ def test_publish_creates_new_bundle_with_required_front_matter(tmp_path: Path):
     fm = _read_fm(result.path)
     assert fm["title"] == "월요일"
     assert fm["slug"] == "2026-04-24"
-    assert fm["draft"] is True
+    assert fm["draft"] is False
     assert fm["source_notion_id"] == "page-1"
     assert fm["categories"] == ["일지"]
     assert result.path.read_text(encoding="utf-8").endswith("hello\n")
@@ -212,7 +212,7 @@ def test_publish_treats_missing_lastmod_as_stale(tmp_path: Path):
             {
                 "title": "stale",
                 "date": "2026-04-24T09:00:00+09:00",
-                "draft": True,
+                "draft": False,
                 "slug": "2026-04-24",
                 "source_notion_id": "p",
             },

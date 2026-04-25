@@ -43,5 +43,5 @@ python -X utf8 -m dayblog publish-today [--page-id <ID>] [--date YYYY-MM-DD]
 
 ## 사후 플로우
 
-- 새 번들은 항상 `draft: true` 상태로 쓰여진다 (plan §3 결정). 사용자가 `hugo server`로 로컬 검증 후 `draft: false`로 플립, commit, push.
-- `draft: true` 상태에서 push 시도 시 `.git/hooks/pre-push` + Claude PreToolUse 양쪽에서 차단된다.
+- 새 번들은 `draft: false`로 직행 — Notion `Status == Ready`가 이미 발행 게이트 역할을 하므로 추가 플립 단계 없음. 사용자는 `hugo server`로 로컬 검증 후 바로 commit + push.
+- pre-push 훅은 `/post-new`로 만든 수동 드래프트 또는 손편집으로 draft:true가 된 포스트를 보호한다 (Notion 자동 발행 경로는 보통 안 걸림).

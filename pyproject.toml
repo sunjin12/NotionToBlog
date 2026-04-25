@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "dayblog"
-version = "0.2.0"
+version = "0.2.1"
 description = "Notion 일기 → Hugo 블로그 발행 파이프라인 (self-dogfood)"
 readme = "README.md"
 requires-python = ">=3.14"
