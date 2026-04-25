@@ -23,7 +23,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-04-25
 
 Adds the `블로그` Heading 1 marker as a hard prerequisite for publication —
-Dayblog now refuses to render the personal-diary portion of a Notion page.
+NotionToBlog now refuses to render the personal-diary portion of a Notion page.
 Existing Hugo bundles are unaffected; the next `publish-today` for a
 marker-less page returns `skipped-no-marker` and writes nothing.
 

@@ -1,14 +1,21 @@
-# Dayblog
+# NotionToBlog
 
-Notion 일기 DB의 오늘자 페이지를 한 명령으로 Hugo(GitHub Pages) 포스트로 발행하는 개인용 파이프라인. **Self-dogfood 전용** — PyPI 배포 의도 없음, Windows + Python 3.14 단일 지원.
+Notion 일기 DB의 오늘자 페이지를 한 명령으로 Hugo(GitHub Pages) 포스트로 발행하는 개인용 파이프라인. **Self-dogfood 전용** — PyPI 배포 의도 없음, Windows + Python 3.14 단일 지원. (내부 패키지 식별자는 `dayblog` / `dayblog_mcp`.)
+
+## Highlights
+
+- Notion 일기 → Hugo + GH Pages 자동 발행 — 두 차례 후속 릴리스(v0.2.0 / v0.2.1)로 실사용 피드백을 반영한 실가동 도구
+- Claude Code의 **Hook + Skill + MCP** 3축을 의도적으로 한정 적용 (Subagent / Plugin / Scheduled task는 범위 외) — 깊이를 위해 너비를 포기한 설계
+- **124 tests** · GitHub Actions CI · Notion API 2025-09-03 (`data_sources.query`) 마이그레이션 대응
+- 핵심 설계 결정과 트레이드오프는 [docs/domain-notes.md](docs/domain-notes.md)에 한 페이지로 정리 — commit history 자체가 곧 개발 일지
 
 ```
 ┌─────────────────────────┐         ┌──────────────────────────┐
 │  NotionToBlog (this)    │         │  Hugo site (external)    │
-│  = Dayblog tool repo    │ writes  │  D:\vscodeprojects\blog  │
-│  - src/dayblog/         │ ──────► │  - content/posts/<slug>/ │
-│  - src/dayblog_mcp/     │         │  - themes/PaperMod/      │
-│  - .claude/ hooks       │         │  - .git/hooks/pre-push   │
+│  - src/dayblog/         │ writes  │  D:\vscodeprojects\blog  │
+│  - src/dayblog_mcp/     │ ──────► │  - content/posts/<slug>/ │
+│  - .claude/ hooks       │         │  - themes/PaperMod/      │
+│                         │         │  - .git/hooks/pre-push   │
 └─────────────────────────┘         └──────────────────────────┘
          ↑                                     ↑
   Claude Code harness                   hugo server + git push
@@ -118,7 +125,7 @@ Notion `Status == Ready`가 이미 발행 게이트 역할을 하므로 publish-
 
 ## Draft 보호 (Double guard)
 
-Dayblog는 `draft: true` 포스트가 실수로 GH Pages에 올라가는 걸 막기 위해 **두 훅을 동시에** 설치합니다. (Notion publish-today는 이미 `draft: false`로 직행하므로 자동 발행 흐름에서는 차단되지 않습니다 — 훅은 `/post-new`로 만든 수동 드래프트 + 손편집으로 draft:true가 된 포스트 보호 용도.)
+NotionToBlog는 `draft: true` 포스트가 실수로 GH Pages에 올라가는 걸 막기 위해 **두 훅을 동시에** 설치합니다. (Notion publish-today는 이미 `draft: false`로 직행하므로 자동 발행 흐름에서는 차단되지 않습니다 — 훅은 `/post-new`로 만든 수동 드래프트 + 손편집으로 draft:true가 된 포스트 보호 용도.)
 
 ### 1. `.git/hooks/pre-push` (터미널 `git push` 커버)
 

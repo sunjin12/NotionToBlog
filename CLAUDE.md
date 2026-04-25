@@ -1,4 +1,4 @@
-# Dayblog — Claude Code 프로젝트 규약
+# NotionToBlog — Claude Code 프로젝트 규약
 
 본인 Notion 일기 DB의 오늘자 페이지를 한 명령으로 Hugo 블로그 포스트로 발행하는 self-dogfood 파이프라인. 대상 Hugo 레포는 `D:\vscodeprojects\blog` (PaperMod).
 
@@ -61,7 +61,7 @@ docs/
 
 - `notion-client` (공식 SDK) 사용. `notion2md`는 **금지** (유지보수 부실, 자체 렌더러로 대체).
 - HTTP: `httpx` (동기). 레이트 리밋 래퍼를 `src/dayblog/notion/client.py`에 캡슐화.
-- Hugo 빌드는 Dayblog 범위 외 — 로컬 `hugo` CLI로 수동 실행.
+- Hugo 빌드는 NotionToBlog 범위 외 — 로컬 `hugo` CLI로 수동 실행.
 
 ## Claude Code 하네스
 

@@ -1,4 +1,4 @@
-"""Dayblog CLI — thin argparse layer over :mod:`dayblog.hugo`.
+"""NotionToBlog CLI — thin argparse layer over :mod:`dayblog.hugo`.
 
 Invoke via ``python -X utf8 -m dayblog <subcommand>`` (see CLAUDE.md Windows
 conventions). Loads ``.env`` from cwd so ``HUGO_SITE_ROOT`` resolves when
@@ -228,7 +228,7 @@ def _build_http_get():
 
 _PRE_PUSH_HOOK = """\
 #!/bin/sh
-# Dayblog pre-push guard — blocks push when any content/posts/*.md has draft:true.
+# NotionToBlog pre-push guard — blocks push when any content/posts/*.md has draft:true.
 # Installed by: python -X utf8 -m dayblog install-pre-push
 exec python -X utf8 -m dayblog.hooks.pre_push_guard pre-push
 """

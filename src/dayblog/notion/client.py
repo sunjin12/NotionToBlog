@@ -64,7 +64,7 @@ class TokenBucket:
 
 
 class NotionClient:
-    """Rate-limited wrapper exposing just the endpoints Dayblog needs.
+    """Rate-limited wrapper exposing just the endpoints NotionToBlog needs.
 
     ``raw`` must look like the ``notion_client.Client`` surface: it must have
     ``databases.retrieve``, ``data_sources.query``, ``pages.retrieve``, and

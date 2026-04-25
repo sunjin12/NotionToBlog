@@ -20,14 +20,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          submodules: false  # we don't pull PaperMod here; Dayblog code is self-contained
+          submodules: false  # we don't pull PaperMod here; NotionToBlog code is self-contained
 
       - uses: actions/setup-python@v5
         with:
           python-version: ${{ matrix.python-version }}
           cache: pip
 
-      - name: Install Dayblog + dev + mcp extras
+      - name: Install NotionToBlog + dev + mcp extras
         run: python -m pip install -e ".[mcp,dev]"
 
       - name: Lint (ruff)

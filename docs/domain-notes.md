@@ -1,4 +1,4 @@
-# Dayblog 도메인 노트
+# NotionToBlog 도메인 노트
 
 > 작성: 2026-04-20 · 상태: Pre-Phase 초안 · 다음 단계: Phase 0 스켈레톤 진입 시 잠금
 
@@ -11,8 +11,8 @@
 ```
 ┌─────────────────────────┐         ┌──────────────────────────┐
 │  NotionToBlog (현재)    │         │  (사용자 Hugo 사이트)    │
-│  = Dayblog 툴 레포      │  writes │  = content/posts/        │
-│  - src/dayblog/         │ ──────► │  - themes/…              │
+│  - src/dayblog/         │  writes │  = content/posts/        │
+│  - src/dayblog_mcp/     │ ──────► │  - themes/…              │
 │  - .claude/             │         │  - config.toml           │
 │  - pre-push hook        │         │  - static/…              │
 └─────────────────────────┘         └──────────────────────────┘
@@ -25,12 +25,12 @@
 **Hugo 사이트 레포 경로**: `D:\vscodeprojects\blog` (확정 2026-04-24)
 
 - 테마: **PaperMod** (submodule, `themes/PaperMod`). 레포 clone 시 `git submodule update --init` 필수
-- 기본 언어: `ko`, 보조 언어: `en` (filename suffix `*.en.md` 방식. Dayblog는 **한국어만** 생성 — 영문은 수동 번역 시 `*.en.md`로 별도 생성)
-- 기존 포스트 위치: `content/posts/hello.md` (flat 파일). Dayblog는 **페이지 번들**(`content/posts/<slug>/index.md`)로 생성 → Hugo는 두 형식 혼합 허용
+- 기본 언어: `ko`, 보조 언어: `en` (filename suffix `*.en.md` 방식. NotionToBlog는 **한국어만** 생성 — 영문은 수동 번역 시 `*.en.md`로 별도 생성)
+- 기존 포스트 위치: `content/posts/hello.md` (flat 파일). NotionToBlog는 **페이지 번들**(`content/posts/<slug>/index.md`)로 생성 → Hugo는 두 형식 혼합 허용
 - `buildDrafts = false`, `hasCJKLanguage = true`, goldmark `unsafe = true` (HTML 허용 — toggle/callout 매핑 정당화)
 - GH Pages: `https://sunjin12.github.io/blog/`
 
-Dayblog는 환경 변수 `HUGO_SITE_ROOT` 또는 `.env`의 동일 키로 타겟 경로를 받는다. 절대 하드코딩 금지.
+NotionToBlog는 환경 변수 `HUGO_SITE_ROOT` 또는 `.env`의 동일 키로 타겟 경로를 받는다. 절대 하드코딩 금지.
 
 ---
 
@@ -45,7 +45,7 @@ Dayblog는 환경 변수 `HUGO_SITE_ROOT` 또는 `.env`의 동일 키로 타겟 
 | 5 | **이미지 레이아웃** | Hugo **페이지 번들**: `content/posts/<slug>/index.md` + `content/posts/<slug>/img-XXXX.ext`. Markdown 참조는 상대경로. | Hugo 이미지 처리(resize/WebP) 활용 가능, slug 이동 시 이미지도 함께 |
 | 6 | **Front matter** | **YAML** (`---` fence). TOML 미사용. | 2026년 테마 대다수 기본값. `gray-matter` 류 도구도 YAML이 표준 |
 | 7 | **Secret 관리** | `NOTION_TOKEN`은 레포 루트 `.env`에만. `.gitignore`에 `.env` 추가 필수. `.claude/settings.json`·`pyproject.toml`·커밋에 **절대 포함 금지**. | secret leak 1회 방지가 편의성보다 높음 |
-| 8 | **Hugo 빌드 주체** | **로컬 `hugo` 실행 + 빌드 산출물 push**. Dayblog는 `content/posts/`만 채우고 이미지 다운로드까지 끝낸다. GH Actions 빌드 미도입. | 이미지 URL 만료(~1h) + 파이프라인 단순화. 본인이 매일 로컬 작업 전제 |
+| 8 | **Hugo 빌드 주체** | **로컬 `hugo` 실행 + 빌드 산출물 push**. NotionToBlog는 `content/posts/`만 채우고 이미지 다운로드까지 끝낸다. GH Actions 빌드 미도입. | 이미지 URL 만료(~1h) + 파이프라인 단순화. 본인이 매일 로컬 작업 전제 |
 
 ---
 

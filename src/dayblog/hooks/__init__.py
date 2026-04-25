@@ -1,4 +1,4 @@
-"""git push guard hooks for Dayblog.
+"""git push guard hooks for NotionToBlog.
 
 The single guard module :mod:`dayblog.hooks.pre_push_guard` serves both
 Claude Code's ``PreToolUse`` hook (JSON stdin/stdout) and git's native
