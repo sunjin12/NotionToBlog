@@ -185,6 +185,9 @@ ruff check src tests
 - [CLAUDE.md](CLAUDE.md) — 이 레포에서 Claude Code가 지켜야 할 규약
 - [CHANGELOG.md](CHANGELOG.md) — 변경 내역
 
+## 안내
+이 프로젝트는 클로드 코드의 도움을 받아 작성되었습니다.
+
 ## 라이선스
 
-MIT (Private :: Do Not Upload — PyPI 배포 금지).
+MIT
