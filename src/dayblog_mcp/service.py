@@ -12,7 +12,12 @@ from datetime import datetime, timedelta, timezone
 from typing import Any, Protocol
 
 from dayblog.notion.images import ImageCollector
-from dayblog.notion.render import RenderContext, render_blocks
+from dayblog.notion.render import (
+    BLOG_SECTION_MARKER,
+    RenderContext,
+    render_blocks,
+    slice_after_heading,
+)
 
 KST = timezone(timedelta(hours=9))
 
@@ -70,16 +75,23 @@ def render_page_markdown(client: _ClientLike, page_id: str) -> dict:
 
     Image files are **not** downloaded here — Phase 3 will do that during the
     publish step. The returned ``images`` list is the manifest the downloader
-    consumes.
+    consumes. Only blocks *after* the top-level Heading 1 ``"블로그"`` marker
+    are rendered (domain-notes §9); when the marker is absent the Markdown
+    comes back empty and a warning is recorded for the caller to surface.
     """
     top = client.list_children(page_id)
+    body_blocks, marker_found = slice_after_heading(top, BLOG_SECTION_MARKER)
     collector = ImageCollector(page_id=page_id)
     ctx = RenderContext(
         page_id=page_id,
         fetch_children=client.list_children,
         collector=collector,
     )
-    markdown = render_blocks(top, ctx)
+    if not marker_found:
+        ctx.warn(
+            f"page {page_id} has no top-level Heading 1 '{BLOG_SECTION_MARKER}' marker"
+        )
+    markdown = render_blocks(body_blocks, ctx)
     return {
         "markdown": markdown,
         "images": [

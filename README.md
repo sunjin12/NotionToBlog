@@ -79,6 +79,34 @@ python -X utf8 -m dayblog install-pre-push    # Hugo 레포에 훅 설치
 - `notion_get_page(page_id)` — 원본 metadata + top-level blocks (진단용)
 - `notion_render_markdown(page_id)` — Markdown + 이미지 매니페스트 + 경고
 
+## 글 작성·수정 플로우
+
+### 새 글 발행
+
+1. Notion `dayblog-journal` DB에서 오늘자 페이지 작성 (Date / Title / 일기 본문)
+2. 페이지 맨 아래에 **Heading 1 `블로그`** 추가 → 그 아래 블로그용 내용 작성 (이 마커가 없으면 발행이 거부됨, domain-notes §9)
+3. `Status` 를 `Ready` 로 변경
+4. `python -X utf8 -m dayblog publish-today` (또는 Claude `/publish-today`) — `created` 또는 `updated` 출력
+5. `hugo server -D` → 로컬 프리뷰 확인 (PaperMod baseURL이 서브패스면 `http://localhost:1313/blog/`)
+6. 만족하면 Hugo 레포의 번들 `index.md`에서 `draft: true` → `false` 플립
+7. `git add -A && git commit -m "post: <slug>" && git push` — pre-push 훅이 잔존 draft 검사 후 GH Pages 자동 배포
+
+### 발행된 글 수정
+
+1. Notion에서 본문 수정 → `last_edited_time` 자동 갱신
+2. `python -X utf8 -m dayblog publish-today` → idempotency가 `updated`로 감지, 번들 덮어씀
+3. `git diff` 확인 → commit + push (이미 `draft: false` 라면 그대로 유지)
+
+### 삭제
+
+- Notion `Status` → `Draft`: 이후 `publish-today` 대상에서 빠짐 (기존 번들은 손대지 않음)
+- 블로그에서도 지우려면 Hugo 레포의 해당 번들 디렉토리를 수동 삭제 후 commit + push
+
+### 트러블슈팅: 빈 포스트가 나옴
+
+- 결과가 `skipped-no-marker` 면 Notion 페이지 본문에 **top-level Heading 1 `블로그`** 마커가 없음. toggle/callout 안의 H1은 인식 안 함 — 페이지 최상위 형제로 둬야 함.
+- `Title`/`Date`/`Status` property 이름이 정확히 매치되는지 (`Status == Ready`).
+
 ## Idempotency
 
 `/publish-today`를 같은 날짜로 여러 번 돌려도 안전합니다 (domain-notes §2 #1):

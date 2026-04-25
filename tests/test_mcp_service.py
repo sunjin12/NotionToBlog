@@ -82,6 +82,14 @@ def _block(
     return {"id": id_, "type": type_, type_: body or {}, "has_children": has_children}
 
 
+def _with_marker(blocks: list[dict]) -> list[dict]:
+    # Domain-notes §9: render_page_markdown only emits Markdown for blocks
+    # after the top-level Heading 1 "블로그". Tests that supply body blocks
+    # prepend the marker via this helper.
+    marker = _block("heading_1", {"rich_text": _rt("블로그")}, id_="MARKER")
+    return [marker, *blocks]
+
+
 # --- today_kst_iso ------------------------------------------------------------
 
 
@@ -193,7 +201,7 @@ def test_render_markdown_renders_top_level_blocks():
         _block("heading_1", {"rich_text": _rt("제목")}),
         _block("paragraph", {"rich_text": _rt("본문")}),
     ]
-    out = render_page_markdown(FakeClient(children={"p1": blocks}), "p1")
+    out = render_page_markdown(FakeClient(children={"p1": _with_marker(blocks)}), "p1")
     assert out["markdown"] == "# 제목\n\n본문\n\n"
     assert out["images"] == []
     assert out["warnings"] == []
@@ -202,7 +210,7 @@ def test_render_markdown_renders_top_level_blocks():
 def test_render_markdown_recurses_into_nested_children():
     parent = _block("bulleted_list_item", {"rich_text": _rt("부모")}, id_="P", has_children=True)
     child = _block("bulleted_list_item", {"rich_text": _rt("자식")})
-    client = FakeClient(children={"p1": [parent], "P": [child]})
+    client = FakeClient(children={"p1": _with_marker([parent]), "P": [child]})
     out = render_page_markdown(client, "p1")
     assert out["markdown"] == "- 부모\n  - 자식\n"
 
@@ -213,7 +221,7 @@ def test_render_markdown_builds_image_manifest():
         "external": {"url": "https://example.com/cat.png"},
         "caption": _rt("고양이"),
     }
-    client = FakeClient(children={"p1": [_block("image", body, id_="IMG")]})
+    client = FakeClient(children={"p1": _with_marker([_block("image", body, id_="IMG")])})
     out = render_page_markdown(client, "p1")
     assert len(out["images"]) == 1
     img = out["images"][0]
@@ -224,7 +232,29 @@ def test_render_markdown_builds_image_manifest():
 
 
 def test_render_markdown_surfaces_renderer_warnings():
-    client = FakeClient(children={"p1": [_block("table", id_="T")]})
+    client = FakeClient(children={"p1": _with_marker([_block("table", id_="T")])})
     out = render_page_markdown(client, "p1")
     assert out["markdown"] == ""
     assert any("unsupported block type" in w and "table" in w for w in out["warnings"])
+
+
+# --- 블로그 marker (domain-notes §9) ------------------------------------------
+
+
+def test_render_markdown_warns_when_marker_missing():
+    # No "블로그" Heading 1 → empty markdown + a clear warning the MCP UI can show.
+    blocks = [_block("paragraph", {"rich_text": _rt("personal diary")})]
+    client = FakeClient(children={"p1": blocks})
+    out = render_page_markdown(client, "p1")
+    assert out["markdown"] == ""
+    assert any("블로그" in w for w in out["warnings"])
+
+
+def test_render_markdown_skips_blocks_before_marker():
+    diary = _block("paragraph", {"rich_text": _rt("PRIVATE")}, id_="D")
+    marker = _block("heading_1", {"rich_text": _rt("블로그")}, id_="M")
+    public = _block("paragraph", {"rich_text": _rt("PUBLIC")}, id_="P")
+    client = FakeClient(children={"p1": [diary, marker, public]})
+    out = render_page_markdown(client, "p1")
+    assert "PRIVATE" not in out["markdown"]
+    assert "PUBLIC" in out["markdown"]

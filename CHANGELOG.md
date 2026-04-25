@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-04-25
+
+Adds the `블로그` Heading 1 marker as a hard prerequisite for publication —
+Dayblog now refuses to render the personal-diary portion of a Notion page.
+Existing Hugo bundles are unaffected; the next `publish-today` for a
+marker-less page returns `skipped-no-marker` and writes nothing.
+
+### Added
+
+- `dayblog.notion.render.slice_after_heading(blocks, title, *, level=1)` —
+  returns ``(blocks_after_marker, marker_found)``. Pure function, top-level
+  scan only (no recursion into toggles/callouts).
+- `dayblog.notion.render.BLOG_SECTION_MARKER = "블로그"` — single source of
+  truth for the marker text.
+- `PublishResult.status` value `"skipped-no-marker"` for pages that lack
+  the marker; the bundle path is reported but the file is not written.
+- README "글 작성·수정 플로우" section walking through the new flow plus a
+  troubleshooting entry for empty-publish results.
+- domain-notes §9 freezing the marker contract (top-level only, KR text,
+  case-sensitive, first-match wins).
+
+### Changed (BREAKING)
+
+- `publish_page` and `notion_render_markdown` now render **only the
+  siblings after the first top-level Heading 1 ``블로그``**. Existing Notion
+  pages must add the marker before their next `publish-today`; without it
+  the publish is skipped (with a warning) so a forgotten marker can't leak
+  diary content.
+
+[Unreleased]: https://github.com/sunjin12/NotionToBlog/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/sunjin12/NotionToBlog/releases/tag/v0.2.0
+
 ## [0.1.0] - 2026-04-24
 
 First end-to-end working release. Verified against a real Notion DB + PaperMod
@@ -61,5 +93,4 @@ confirmed.
   any behavior change there must land alongside the corresponding test
   update.
 
-[Unreleased]: https://github.com/sunjin12/NotionToBlog/compare/v0.1.0...HEAD
 [0.1.0]: https://github.com/sunjin12/NotionToBlog/releases/tag/v0.1.0

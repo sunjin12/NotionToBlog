@@ -13,10 +13,12 @@ import pytest
 
 from dayblog.notion.images import ImageCollector
 from dayblog.notion.render import (
+    BLOG_SECTION_MARKER,
     SUPPORTED_BLOCK_TYPES,
     RenderContext,
     render_blocks,
     render_rich_text,
+    slice_after_heading,
 )
 
 # --- factories ----------------------------------------------------------------
@@ -255,3 +257,80 @@ def test_supported_block_types_covers_domain_notes_table():
         "link_preview",
     }
     assert expected == SUPPORTED_BLOCK_TYPES
+
+
+# --- slice_after_heading ------------------------------------------------------
+
+
+def test_blog_section_marker_constant_is_korean_blog():
+    # Contract — the marker is a domain decision (§9), not something callers
+    # should be overriding ad hoc.
+    assert BLOG_SECTION_MARKER == "블로그"
+
+
+def test_slice_after_heading_returns_blocks_following_marker():
+    marker = _block("heading_1", {"rich_text": _rt("블로그")})
+    p1 = _block("paragraph", {"rich_text": _rt("first")}, id="P1")
+    p2 = _block("paragraph", {"rich_text": _rt("second")}, id="P2")
+    result, found = slice_after_heading([marker, p1, p2], "블로그")
+    assert found is True
+    assert result == [p1, p2]
+
+
+def test_slice_after_heading_excludes_blocks_before_marker():
+    # Personal diary section above the marker must not leak out.
+    diary = _block("paragraph", {"rich_text": _rt("오늘은...")}, id="D1")
+    marker = _block("heading_1", {"rich_text": _rt("블로그")})
+    public = _block("paragraph", {"rich_text": _rt("공개")}, id="P1")
+    result, found = slice_after_heading([diary, marker, public], "블로그")
+    assert found is True
+    assert result == [public]
+
+
+def test_slice_after_heading_marker_at_end_returns_empty_found():
+    diary = _block("paragraph", {"rich_text": _rt("일기")})
+    marker = _block("heading_1", {"rich_text": _rt("블로그")})
+    result, found = slice_after_heading([diary, marker], "블로그")
+    assert found is True
+    assert result == []
+
+
+def test_slice_after_heading_no_marker_returns_false():
+    blocks = [_block("paragraph", {"rich_text": _rt("no marker here")})]
+    result, found = slice_after_heading(blocks, "블로그")
+    assert found is False
+    assert result == []
+
+
+def test_slice_after_heading_takes_first_of_multiple_markers():
+    first = _block("heading_1", {"rich_text": _rt("블로그")})
+    between = _block("paragraph", {"rich_text": _rt("between")}, id="B")
+    second = _block("heading_1", {"rich_text": _rt("블로그")})
+    tail = _block("paragraph", {"rich_text": _rt("tail")}, id="T")
+    result, found = slice_after_heading([first, between, second, tail], "블로그")
+    assert found is True
+    assert result == [between, second, tail]
+
+
+def test_slice_after_heading_ignores_heading_2_by_default():
+    # User contract: the marker is a Heading 1 specifically; H2/H3 with the
+    # same text are unrelated section titles.
+    h2 = _block("heading_2", {"rich_text": _rt("블로그")})
+    result, found = slice_after_heading([h2, _block("paragraph")], "블로그")
+    assert found is False
+    assert result == []
+
+
+def test_slice_after_heading_trims_whitespace():
+    marker = _block("heading_1", {"rich_text": _rt("  블로그  ")})
+    after = _block("paragraph", {"rich_text": _rt("x")}, id="A")
+    result, found = slice_after_heading([marker, after], "블로그")
+    assert found is True
+    assert result == [after]
+
+
+def test_slice_after_heading_ignores_other_text():
+    other = _block("heading_1", {"rich_text": _rt("다른 제목")})
+    result, found = slice_after_heading([other], "블로그")
+    assert found is False
+    assert result == []

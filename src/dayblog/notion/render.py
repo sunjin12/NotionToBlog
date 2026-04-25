@@ -17,6 +17,8 @@ from dataclasses import dataclass, field
 
 from .images import ImageCollector
 
+BLOG_SECTION_MARKER = "블로그"
+
 
 @dataclass
 class RenderContext:
@@ -245,3 +247,34 @@ _RENDERERS: dict[str, Callable[[dict, RenderContext], str]] = {
 }
 
 SUPPORTED_BLOCK_TYPES: frozenset[str] = frozenset(_RENDERERS)
+
+
+# --- marker-based section slicing --------------------------------------------
+
+
+def slice_after_heading(
+    blocks: list[dict],
+    title: str,
+    *,
+    level: int = 1,
+) -> tuple[list[dict], bool]:
+    """Return ``(blocks_after_marker, marker_found)``.
+
+    Walks ``blocks`` top-level (no recursion into children) looking for the
+    first ``heading_{level}`` whose rich_text stripped equals ``title.strip()``.
+    On match the function returns every sibling after that heading (the
+    heading itself is not included) with ``marker_found=True``. On no match
+    it returns ``([], False)`` so callers decide whether to skip, warn, or
+    fall back to the full list — the tuple keeps the decision close to the
+    publish flow (see domain-notes §9).
+    """
+    needle = title.strip()
+    target_type = f"heading_{level}"
+    for i, block in enumerate(blocks):
+        if block.get("type") != target_type:
+            continue
+        body = block.get(target_type) or {}
+        text = render_rich_text(body.get("rich_text") or []).strip()
+        if text == needle:
+            return list(blocks[i + 1:]), True
+    return [], False

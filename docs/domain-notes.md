@@ -162,3 +162,18 @@ images.download(url, page_id, block_id)
 - [x] Hugo 테마 — PaperMod (front matter: `title` / `date` / `draft` / `tags` / `categories` / `description` / `slug`)
 - [x] 테스트 Notion Integration secret 생성 + DB ID 기록 (사용자 개인 노트에 보관, 2026-04-24)
 - [x] 더미 페이지 3개 작성: (a) 일반 문단 + 중첩 리스트, (b) 이미지 1장 + 코드 블록, (c) 토글 1개 + 콜아웃
+
+---
+
+## 9. 블로그 섹션 마커 (2026-04-25 확정)
+
+사용자 일기 템플릿이 개인 기록(상단)과 블로그 섹션(하단)으로 나뉘므로, 페이지 본문 중 **블로그 섹션만** 발행되어야 한다.
+
+- **마커**: top-level `heading_1` 블록, `render_rich_text(...).strip()` 결과가 정확히 `"블로그"` (한국어, 대소문자 민감)
+- **동작**: 매치 이후의 형제 블록만 Hugo 본문에 렌더. 매치 자체 및 이전 블록은 제외 (개인 일기 공간)
+- **매치 없음**: 해당 페이지 publish는 `PublishResult.status = "skipped-no-marker"`로 끝나고 번들이 생성되지 않는다. warning만 기록 — 사용자가 마커를 깜빡한 사고로 일기가 노출되는 것을 방지하는 안전 기본값
+- **이미지**: 마커 이후 블록의 이미지만 `ImageCollector`에 등록되므로 다운로드도 자동으로 블로그 섹션 한정
+- **복수 마커**: 첫 번째 매치를 기준으로 슬라이스 (사용자 계약)
+- **중첩 무시**: toggle/callout 내부의 `heading_1`은 무시 (top-level 형제만 순회)
+- **확장 미지원**: Heading 2/3 마커, 다국어 alias("blog" 등), 다른 텍스트 — YAGNI. 필요 시 별도 결정으로 추가
+- 구현: `dayblog.notion.render.slice_after_heading(blocks, title, level=1) -> (list[dict], bool)` + `BLOG_SECTION_MARKER = "블로그"` 상수. publish/service 두 호출지점이 동일한 함수를 공유

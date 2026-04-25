@@ -83,6 +83,15 @@ def _block(
     return {"id": id_, "type": type_, type_: body or {}, "has_children": has_children}
 
 
+def _with_marker(blocks: list[dict]) -> list[dict]:
+    # Domain-notes §9: publish_page only renders blocks after the top-level
+    # Heading 1 "블로그". Tests that supply a block list for the *body* prepend
+    # the marker through this helper so the publish flow sees both the
+    # gate and the body.
+    marker = _block("heading_1", {"rich_text": _rt("블로그")}, id_="MARKER")
+    return [marker, *blocks]
+
+
 def _read_fm(path: Path) -> dict:
     fm = hugo.parse_front_matter(path.read_text(encoding="utf-8"))
     assert fm is not None
@@ -95,7 +104,7 @@ def _read_fm(path: Path) -> dict:
 def test_publish_creates_new_bundle_with_required_front_matter(tmp_path: Path):
     page = _notion_page("page-1", date="2026-04-24", title="월요일")
     blocks = [_block("paragraph", {"rich_text": _rt("hello")})]
-    client = FakeClient(pages={"page-1": page}, children={"page-1": blocks})
+    client = FakeClient(pages={"page-1": page}, children={"page-1": _with_marker(blocks)})
 
     result = publish_page(
         client=client,
@@ -124,7 +133,7 @@ def test_publish_includes_tags_category_and_summary(tmp_path: Path):
         category="개발",
         summary="짧은 요약",
     )
-    client = FakeClient(pages={"page-1": page}, children={"page-1": []})
+    client = FakeClient(pages={"page-1": page}, children={"page-1": _with_marker([])})
     result = publish_page(client=client, page_id="page-1", site_root=tmp_path)
     fm = _read_fm(result.path)
     assert fm["tags"] == ["일기", "회고"]
@@ -134,7 +143,7 @@ def test_publish_includes_tags_category_and_summary(tmp_path: Path):
 
 def test_publish_synthesizes_time_when_notion_date_is_date_only(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24", title="X")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     result = publish_page(
         client=client,
         page_id="p",
@@ -147,7 +156,7 @@ def test_publish_synthesizes_time_when_notion_date_is_date_only(tmp_path: Path):
 
 def test_publish_keeps_notion_datetime_when_date_has_time(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24T15:30:00+09:00", title="X")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     result = publish_page(client=client, page_id="p", site_root=tmp_path)
     fm = _read_fm(result.path)
     assert fm["date"] == "2026-04-24T15:30:00+09:00"
@@ -155,7 +164,7 @@ def test_publish_keeps_notion_datetime_when_date_has_time(tmp_path: Path):
 
 def test_publish_converts_lastmod_to_kst(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24", last_edited="2026-04-24T03:00:00.000Z")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     result = publish_page(client=client, page_id="p", site_root=tmp_path)
     fm = _read_fm(result.path)
     # UTC 03:00 → KST 12:00
@@ -167,7 +176,7 @@ def test_publish_converts_lastmod_to_kst(tmp_path: Path):
 
 def test_publish_skips_when_existing_lastmod_is_current(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24", last_edited="2026-04-24T03:00:00.000Z")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
 
     # First publish creates the bundle.
     first = publish_page(client=client, page_id="p", site_root=tmp_path)
@@ -181,7 +190,7 @@ def test_publish_skips_when_existing_lastmod_is_current(tmp_path: Path):
 
 def test_publish_updates_when_notion_page_is_newer(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24", last_edited="2026-04-24T03:00:00.000Z", title="old")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     publish_page(client=client, page_id="p", site_root=tmp_path)
 
     # Bump Notion lastmod and title.
@@ -214,7 +223,7 @@ def test_publish_treats_missing_lastmod_as_stale(tmp_path: Path):
         encoding="utf-8",
     )
     page = _notion_page("p", date="2026-04-24", last_edited="2026-04-24T10:00:00.000Z", title="fresh")
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     result = publish_page(client=client, page_id="p", site_root=tmp_path)
     assert result.status == "updated"
     assert _read_fm(result.path)["title"] == "fresh"
@@ -245,7 +254,7 @@ def test_publish_picks_suffix_when_different_page_owns_base_slug(tmp_path: Path)
     )
 
     page = _notion_page("new", date="2026-04-24", title="mine")
-    client = FakeClient(pages={"new": page}, children={"new": []})
+    client = FakeClient(pages={"new": page}, children={"new": _with_marker([])})
     result = publish_page(client=client, page_id="new", site_root=tmp_path)
     assert result.status == "created"
     assert result.path.parent.name == "2026-04-24-2"
@@ -275,7 +284,7 @@ def test_publish_reuses_numbered_slug_when_owner_matches(tmp_path: Path):
         encoding="utf-8",
     )
     page = _notion_page("mine", date="2026-04-24", last_edited="2026-04-24T01:00:00Z")
-    client = FakeClient(pages={"mine": page}, children={"mine": []})
+    client = FakeClient(pages={"mine": page}, children={"mine": _with_marker([])})
     first = publish_page(client=client, page_id="mine", site_root=tmp_path)
     assert first.path.parent.name == "2026-04-24-2"
 
@@ -298,7 +307,7 @@ def test_publish_downloads_images_when_http_get_supplied(tmp_path: Path):
     }
     blocks = [_block("image", image_body, id_="IMG")]
     page = _notion_page("p", date="2026-04-24")
-    client = FakeClient(pages={"p": page}, children={"p": blocks})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker(blocks)})
 
     store = {"https://example.com/cat.png": b"PNG_BYTES"}
     result = publish_page(
@@ -323,7 +332,7 @@ def test_publish_without_http_get_skips_image_download(tmp_path: Path):
     }
     blocks = [_block("image", image_body, id_="IMG")]
     page = _notion_page("p", date="2026-04-24")
-    client = FakeClient(pages={"p": page}, children={"p": blocks})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker(blocks)})
 
     result = publish_page(client=client, page_id="p", site_root=tmp_path)
     assert result.image_count == 0
@@ -337,14 +346,14 @@ def test_publish_without_http_get_skips_image_download(tmp_path: Path):
 
 def test_publish_errors_when_date_property_is_missing(tmp_path: Path):
     page = {"id": "p", "last_edited_time": "", "properties": {}}
-    client = FakeClient(pages={"p": page}, children={"p": []})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([])})
     with pytest.raises(hugo.HugoError, match="Date"):
         publish_page(client=client, page_id="p", site_root=tmp_path)
 
 
 def test_publish_surfaces_renderer_warnings(tmp_path: Path):
     page = _notion_page("p", date="2026-04-24")
-    client = FakeClient(pages={"p": page}, children={"p": [_block("table", id_="T")]})
+    client = FakeClient(pages={"p": page}, children={"p": _with_marker([_block("table", id_="T")])})
     result = publish_page(client=client, page_id="p", site_root=tmp_path)
     assert any("unsupported block type" in w for w in result.warnings)
 
@@ -357,3 +366,37 @@ def test_publish_result_is_a_dataclass():
         "image_count",
         "warnings",
     }
+
+
+# --- 블로그 marker (domain-notes §9) ------------------------------------------
+
+
+def test_publish_skips_page_without_blog_marker(tmp_path: Path):
+    # No marker block in the children list — publish must refuse so the
+    # personal diary above the (forgotten) marker can't leak.
+    page = _notion_page("p", date="2026-04-24")
+    blocks = [_block("paragraph", {"rich_text": _rt("personal diary content")})]
+    client = FakeClient(pages={"p": page}, children={"p": blocks})
+
+    result = publish_page(client=client, page_id="p", site_root=tmp_path)
+
+    assert result.status == "skipped-no-marker"
+    assert any("블로그" in w for w in result.warnings)
+    # No bundle should have been created on disk.
+    bundle_dir = tmp_path / "content" / "posts" / "2026-04-24"
+    assert not bundle_dir.exists()
+
+
+def test_publish_renders_only_blocks_after_blog_marker(tmp_path: Path):
+    # Diary blocks above the marker must not appear in the rendered body.
+    page = _notion_page("p", date="2026-04-24", title="T")
+    diary = _block("paragraph", {"rich_text": _rt("PRIVATE DIARY")}, id_="D1")
+    marker = _block("heading_1", {"rich_text": _rt("블로그")}, id_="M")
+    public = _block("paragraph", {"rich_text": _rt("public body")}, id_="P1")
+    client = FakeClient(pages={"p": page}, children={"p": [diary, marker, public]})
+
+    result = publish_page(client=client, page_id="p", site_root=tmp_path)
+
+    body = result.path.read_text(encoding="utf-8")
+    assert "PRIVATE DIARY" not in body
+    assert "public body" in body

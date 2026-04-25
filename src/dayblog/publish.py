@@ -26,7 +26,12 @@ from typing import Any, Protocol
 
 from . import hugo
 from .notion.images import ImageCollector, download_all
-from .notion.render import RenderContext, render_blocks
+from .notion.render import (
+    BLOG_SECTION_MARKER,
+    RenderContext,
+    render_blocks,
+    slice_after_heading,
+)
 
 _MAX_SLUG_SUFFIX = 50
 
@@ -77,15 +82,29 @@ def publish_page(
     meta = _extract_metadata(page, page_id=page_id, now=now_dt)
 
     top = client.list_children(page_id)
+    posts_dir = site_root.joinpath(*hugo.POSTS_SUBPATH)
+
+    # Domain-notes §9: only the siblings *after* a top-level Heading 1
+    # "블로그" marker are public. No marker ⇒ refuse to publish — prevents a
+    # diary page that forgot the marker from leaking personal content.
+    body_blocks, marker_found = slice_after_heading(top, BLOG_SECTION_MARKER)
+    if not marker_found:
+        return PublishResult(
+            path=posts_dir / meta.date.isoformat() / "index.md",
+            status="skipped-no-marker",
+            warnings=[
+                f"page {page_id} has no top-level Heading 1 '{BLOG_SECTION_MARKER}' — nothing published",
+            ],
+        )
+
     collector = ImageCollector(page_id=page_id)
     ctx = RenderContext(
         page_id=page_id,
         fetch_children=client.list_children,
         collector=collector,
     )
-    body = render_blocks(top, ctx)
+    body = render_blocks(body_blocks, ctx)
 
-    posts_dir = site_root.joinpath(*hugo.POSTS_SUBPATH)
     slug, existing_fm, index_path = _resolve_bundle(posts_dir, meta.date, page_id)
 
     if existing_fm is not None and _is_up_to_date(existing_fm, meta.last_edited_time):
